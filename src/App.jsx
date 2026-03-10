@@ -29,7 +29,9 @@ function Particles({ dark }) {
     let id;
     let W = (canvas.width = window.innerWidth);
     let H = (canvas.height = window.innerHeight);
-    // Stars
+    let t = 0;
+
+    // ── DARK MODE: stars + nebulas + shooting stars ──────────────────────────
     const stars = Array.from({ length: 200 }, () => ({
       x: Math.random()*W, y: Math.random()*H,
       r: Math.random()*1.6+0.2,
@@ -37,25 +39,45 @@ function Particles({ dark }) {
       twinkle: Math.random()*Math.PI*2,
       speed: Math.random()*0.02+0.005
     }));
-    // Shooting stars
     const shoots = [];
     let shootTimer = 0;
-    // Nebula clouds (static blobs)
     const nebulas = Array.from({ length: 5 }, () => ({
       x: Math.random()*W, y: Math.random()*H,
       r: Math.random()*180+80,
       hue: [240,260,200,280,220][Math.floor(Math.random()*5)],
       a: Math.random()*0.06+0.03
     }));
+
+    // ── LIGHT MODE: aurora blobs ──────────────────────────────────────────────
+    const blobs = [
+      { x:0.75, y:0.1,  r:0.38, hue:250, sat:80, lit:75, speed:0.00018, phase:0.0 },
+      { x:0.15, y:0.75, r:0.32, hue:210, sat:70, lit:78, speed:0.00024, phase:1.2 },
+      { x:0.55, y:0.5,  r:0.28, hue:270, sat:65, lit:80, speed:0.00031, phase:2.5 },
+      { x:0.88, y:0.65, r:0.22, hue:230, sat:75, lit:76, speed:0.00020, phase:0.8 },
+      { x:0.30, y:0.25, r:0.25, hue:195, sat:60, lit:82, speed:0.00027, phase:3.1 },
+    ];
+    // Floating light particles
+    const lightDots = Array.from({ length: 80 }, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      r: Math.random()*2+0.5,
+      vx: (Math.random()-0.5)*0.3,
+      vy: (Math.random()-0.5)*0.3,
+      a: Math.random()*0.25+0.05,
+      hue: 220+Math.random()*60,
+    }));
+
     const onResize = () => {
       W = canvas.width = window.innerWidth;
       H = canvas.height = window.innerHeight;
     };
     window.addEventListener("resize", onResize);
+
     const draw = () => {
+      t++;
       ctx.clearRect(0, 0, W, H);
-      // Draw nebulas (only in dark mode)
+
       if (dark) {
+        // ── DARK: nebulas ──
         for (const n of nebulas) {
           const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
           g.addColorStop(0, `hsla(${n.hue},80%,60%,${n.a})`);
@@ -63,43 +85,65 @@ function Particles({ dark }) {
           ctx.fillStyle = g;
           ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI*2); ctx.fill();
         }
-      }
-      // Draw stars
-      for (const s of stars) {
-        s.twinkle += s.speed;
-        const alpha = dark ? (s.a * (0.5 + 0.5 * Math.sin(s.twinkle))) : (s.a * 0.3 * (0.5 + 0.5 * Math.sin(s.twinkle)));
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-        ctx.fillStyle = dark ? `rgba(255,255,255,${alpha})` : `rgba(80,80,180,${alpha})`;
-        ctx.fill();
-        // Glow for big stars
-        if (s.r > 1.2 && dark) {
+        // ── DARK: stars ──
+        for (const s of stars) {
+          s.twinkle += s.speed;
+          const alpha = s.a * (0.5 + 0.5 * Math.sin(s.twinkle));
           ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r*3, 0, Math.PI*2);
-          ctx.fillStyle = `rgba(180,220,255,${alpha*0.12})`;
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
           ctx.fill();
+          if (s.r > 1.2) {
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r*3, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(180,220,255,${alpha*0.12})`;
+            ctx.fill();
+          }
         }
-      }
-      // Shooting stars
-      shootTimer++;
-      if (shootTimer > 120 && Math.random() < 0.025) {
-        shoots.push({ x: Math.random()*W*0.7, y: Math.random()*H*0.4, len: Math.random()*120+60, vx: Math.random()*6+4, vy: Math.random()*3+2, a: 1 });
-        shootTimer = 0;
-      }
-      for (let i = shoots.length-1; i>=0; i--) {
-        const s = shoots[i];
-        if (dark) {
+        // ── DARK: shooting stars ──
+        shootTimer++;
+        if (shootTimer > 120 && Math.random() < 0.025) {
+          shoots.push({ x:Math.random()*W*0.7, y:Math.random()*H*0.4, len:Math.random()*120+60, vx:Math.random()*6+4, vy:Math.random()*3+2, a:1 });
+          shootTimer = 0;
+        }
+        for (let i = shoots.length-1; i>=0; i--) {
+          const s = shoots[i];
           ctx.beginPath();
           ctx.moveTo(s.x, s.y);
-          ctx.lineTo(s.x - s.len, s.y - s.len*0.4);
+          ctx.lineTo(s.x-s.len, s.y-s.len*0.4);
           const g = ctx.createLinearGradient(s.x, s.y, s.x-s.len, s.y-s.len*0.4);
           g.addColorStop(0, `rgba(255,255,255,${s.a})`);
           g.addColorStop(1, `rgba(255,255,255,0)`);
           ctx.strokeStyle = g; ctx.lineWidth = 1.5; ctx.stroke();
+          s.x += s.vx; s.y += s.vy; s.a -= 0.022;
+          if (s.a <= 0) shoots.splice(i, 1);
         }
-        s.x += s.vx; s.y += s.vy; s.a -= 0.022;
-        if (s.a <= 0) shoots.splice(i, 1);
+
+      } else {
+        // ── LIGHT: animated aurora blobs ──
+        for (const b of blobs) {
+          const cx = (b.x + Math.sin(t * b.speed * 1.7 + b.phase) * 0.18) * W;
+          const cy = (b.y + Math.cos(t * b.speed * 1.3 + b.phase) * 0.14) * H;
+          const radius = b.r * Math.min(W, H) * (0.9 + Math.sin(t * b.speed * 2 + b.phase) * 0.1);
+          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+          g.addColorStop(0, `hsla(${b.hue},${b.sat}%,${b.lit}%,0.22)`);
+          g.addColorStop(0.5, `hsla(${b.hue},${b.sat}%,${b.lit}%,0.08)`);
+          g.addColorStop(1, `hsla(${b.hue},${b.sat}%,${b.lit}%,0)`);
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.fill();
+        }
+        // ── LIGHT: floating soft particles ──
+        for (const d of lightDots) {
+          d.x += d.vx; d.y += d.vy;
+          if (d.x < 0) d.x = W; if (d.x > W) d.x = 0;
+          if (d.y < 0) d.y = H; if (d.y > H) d.y = 0;
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
+          ctx.fillStyle = `hsla(${d.hue},70%,60%,${d.a})`;
+          ctx.fill();
+        }
       }
+
       id = requestAnimationFrame(draw);
     };
     draw();
@@ -108,7 +152,8 @@ function Particles({ dark }) {
   return <canvas ref={ref} style={{ position:"fixed", top:0, left:0, width:"100%", height:"100%", zIndex:0, pointerEvents:"none" }} />;
 }
 
-function Typewriter({ strings }) {
+
+function Typewriter({ strings, dark }) {
   const [disp, setDisp] = useState("");
   const [si, setSi] = useState(0);
   const [ci, setCi] = useState(0);
@@ -122,7 +167,7 @@ function Typewriter({ strings }) {
     setDisp(cur.slice(0,ci));
     return () => clearTimeout(t);
   }, [ci, del, si, strings]);
-  return <span>{disp}<span style={{ borderRight:"2px solid #00f5a0", marginLeft:2, animation:"blink 1s step-end infinite" }} /></span>;
+  return <span>{disp}<span style={{ borderRight:`2px solid ${dark?"#00f5a0":"#5050c8"}`, marginLeft:2, animation:"blink 1s step-end infinite" }} /></span>;
 }
 
 
@@ -180,15 +225,15 @@ function SkillBar({ name, level, cat, dark, delay }) {
     return () => obs.disconnect();
   }, [level, delay]);
   return (
-    <div ref={ref} style={{ marginBottom:22, padding:"14px 16px", borderRadius:12, background:dark?"rgba(255,255,255,0.025)":"rgba(0,0,0,0.025)", border:dark?"1px solid rgba(255,255,255,0.05)":"1px solid rgba(0,0,0,0.05)", transition:"background 0.3s" }}>
+    <div ref={ref} style={{ marginBottom:22, padding:"14px 16px", borderRadius:12, background:dark?"rgba(255,255,255,0.025)":"rgba(255,255,255,0.65)", border:dark?"1px solid rgba(255,255,255,0.05)":"1px solid rgba(0,0,0,0.05)", transition:"background 0.6s cubic-bezier(0.4,0,0.2,1), border-color 0.6s cubic-bezier(0.4,0,0.2,1)" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <span style={{ fontSize:13, fontFamily:"Space Mono,monospace", color:dark?"#e8e8e8":"#222", fontWeight:700 }}>{name}</span>
+          <span style={{ fontSize:13, fontFamily:"Space Mono,monospace", color:dark?"#e8e8e8":"#0f0a28", fontWeight:700 }}>{name}</span>
           <span style={{ fontSize:9, background:dark?"rgba(0,245,160,0.1)":"rgba(80,80,200,0.1)", color:dark?"#00f5a0":"#5050c8", border:dark?"1px solid rgba(0,245,160,0.2)":"1px solid rgba(80,80,200,0.2)", borderRadius:5, padding:"2px 6px", fontFamily:"monospace", letterSpacing:0.5 }}>{cat}</span>
         </div>
-        <span style={{ fontSize:12, color:dark?"#00f5a0":"#5050c8", fontFamily:"Space Mono,monospace", fontWeight:700 }}>{level}%</span>
+        <span style={{ fontSize:12, color:dark?"#00f5a0":"#4040c0", fontFamily:"Space Mono,monospace", fontWeight:700 }}>{level}%</span>
       </div>
-      <div style={{ height:5, borderRadius:3, background:dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.08)", overflow:"hidden" }}>
+      <div style={{ height:5, borderRadius:3, background:dark?"rgba(255,255,255,0.07)":"rgba(80,80,200,0.12)", overflow:"hidden" }}>
         <div style={{ height:"100%", width:`${w}%`, borderRadius:3, background:dark?"linear-gradient(90deg,#00f5a0,#00b4d8,#7c83fd)":"linear-gradient(90deg,#5050c8,#a78bfa)", transition:"width 1.4s cubic-bezier(0.4,0,0.2,1)", boxShadow:dark?`0 0 10px rgba(0,245,160,0.4)`:"none" }} />
       </div>
     </div>
@@ -198,43 +243,44 @@ function SkillBar({ name, level, cat, dark, delay }) {
 function Card({ p, dark }) {
   const [hov, setHov] = useState(false);
   return (
-    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ background:dark?(hov?"rgba(255,255,255,0.055)":"rgba(255,255,255,0.02)"):(hov?"rgba(255,255,255,0.97)":"rgba(255,255,255,0.72)"), border:`1px solid ${hov?p.color:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)"}`, borderRadius:16, padding:"26px 22px", transition:"all 0.3s ease", transform:hov?"translateY(-7px)":"translateY(0)", boxShadow:hov?`0 22px 44px ${p.color}25`:dark?"0 2px 14px rgba(0,0,0,0.35)":"0 2px 14px rgba(0,0,0,0.07)", backdropFilter:"blur(12px)", position:"relative", overflow:"hidden" }}>
+    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ background:dark?(hov?"rgba(255,255,255,0.055)":"rgba(255,255,255,0.02)"):(hov?"rgba(255,255,255,0.98)":"rgba(255,255,255,0.82)"), border:`1px solid ${hov?p.color:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)"}`, borderRadius:16, padding:"26px 22px", transition:"all 0.3s ease", transform:hov?"translateY(-7px)":"translateY(0)", boxShadow:hov?`0 22px 44px ${p.color}25`:dark?"0 2px 14px rgba(0,0,0,0.35)":"0 4px 20px rgba(80,80,200,0.1)", backdropFilter:"blur(12px)", position:"relative", overflow:"hidden" }}>
       {p.featured && <div style={{ position:"absolute", top:14, right:14, background:`${p.color}18`, border:`1px solid ${p.color}55`, borderRadius:6, padding:"3px 10px", fontSize:9, color:p.color, fontFamily:"Space Mono,monospace", letterSpacing:2, animation:"pulse 2.5s ease infinite" }}>★ FEATURED</div>}
       <div style={{ position:"absolute", top:0, right:0, width:140, height:140, background:`radial-gradient(circle at top right, ${p.color}12, transparent 70%)`, pointerEvents:"none" }} />
       <div style={{ display:"flex", gap:14, marginBottom:14 }}>
         <span style={{ fontSize:28 }}>{p.icon}</span>
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:15, fontWeight:700, fontFamily:"Space Mono,monospace", color:dark?"#fff":"#111" }}>{p.title}</div>
+          <div style={{ fontSize:15, fontWeight:700, fontFamily:"Space Mono,monospace", color:dark?"#fff":"#0f0a28" }}>{p.title}</div>
           <div style={{ fontSize:11, color:p.color, marginTop:3, fontFamily:"monospace" }}>{p.tag}</div>
         </div>
         <span style={{ fontSize:11, color:dark?"rgba(255,255,255,0.25)":"rgba(0,0,0,0.3)", fontFamily:"monospace" }}>{p.year}</span>
       </div>
-      <p style={{ fontSize:13.5, lineHeight:1.75, color:dark?"rgba(255,255,255,0.58)":"rgba(0,0,0,0.58)", margin:"0 0 16px 0" }}>{p.desc}</p>
+      <p style={{ fontSize:13.5, lineHeight:1.75, color:dark?"rgba(255,255,255,0.58)":"rgba(15,10,40,0.68)", margin:"0 0 16px 0" }}>{p.desc}</p>
       <a href={p.github} target="_blank" rel="noreferrer" style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:12, fontFamily:"Space Mono,monospace", color:p.color, textDecoration:"none", border:`1px solid ${p.color}40`, padding:"6px 12px", borderRadius:7, transition:"background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background=`${p.color}15`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>⌥ GitHub →</a>
     </div>
   );
 }
 
-function Nav({ dark, setDark, active }) {
+function Nav({ dark, onToggle, active }) {
   const links = ["Home","About","Projects","Skills","Experience","Contact"];
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => { const h=()=>setScrolled(window.scrollY>20); window.addEventListener("scroll",h); return ()=>window.removeEventListener("scroll",h); },[]);
   const accent = dark?"#00f5a0":"#5050c8";
   return (
-    <nav style={{ position:"fixed", top:0, left:0, right:0, zIndex:100, backdropFilter:scrolled?"blur(20px)":"none", background:scrolled?(dark?"rgba(8,8,20,0.9)":"rgba(244,244,251,0.9)"):"transparent", borderBottom:scrolled?`1px solid ${accent}18`:"none", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 clamp(16px,5vw,80px)", height:64, transition:"background 0.3s" }}>
+    <nav style={{ position:"fixed", top:0, left:0, right:0, zIndex:100, backdropFilter:scrolled?"blur(20px)":"none", background:scrolled?(dark?"rgba(8,8,20,0.9)":"rgba(240,240,255,0.92)"):"transparent", borderBottom:scrolled?`1px solid ${accent}18`:"none", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 clamp(16px,5vw,80px)", height:64, transition:"background 0.6s cubic-bezier(0.4,0,0.2,1), border-color 0.6s cubic-bezier(0.4,0,0.2,1)" }}>
       <span style={{ fontFamily:"Space Mono,monospace", fontWeight:700, fontSize:14, color:accent, letterSpacing:1 }}>ahmed.dev</span>
       <div className="nav-text-links" style={{ display:"flex", gap:"clamp(10px,2vw,26px)", alignItems:"center" }}>
         {links.map(l=><a key={l} href={`#${l.toLowerCase()}`} style={{ fontSize:11, fontFamily:"Space Mono,monospace", color:active===l.toLowerCase()?accent:(dark?"rgba(255,255,255,0.45)":"rgba(0,0,0,0.45)"), textDecoration:"none", fontWeight:active===l.toLowerCase()?700:400, letterSpacing:0.5, transition:"color 0.25s", paddingBottom:2, borderBottom:active===l.toLowerCase()?`1px solid ${accent}`:"1px solid transparent" }}>{l}</a>)}
-        <button onClick={()=>setDark(d=>!d)} style={{ background:`${accent}18`, border:`1px solid ${accent}40`, borderRadius:7, padding:"5px 10px", cursor:"pointer", color:accent, fontSize:11, fontFamily:"Space Mono,monospace", transition:"all 0.2s" }}>{dark?"☀ Light":"◑ Dark"}</button>
+        <button onClick={onToggle} style={{ background:`${accent}18`, border:`1px solid ${accent}40`, borderRadius:7, padding:"5px 12px", cursor:"pointer", color:accent, fontSize:11, fontFamily:"Space Mono,monospace", transition:"background 0.55s, border-color 0.55s, color 0.55s", minWidth:72, textAlign:"center" }}>{dark?"☀ Light":"◑ Dark"}</button>
       </div>
       {/* Mobile: just dark toggle */}
-      <button className="mobile-toggle" onClick={()=>setDark(d=>!d)} style={{ display:"none", background:`${accent}18`, border:`1px solid ${accent}40`, borderRadius:7, padding:"6px 12px", cursor:"pointer", color:accent, fontSize:12, fontFamily:"Space Mono,monospace" }}>{dark?"☀":"◑"}</button>
+      <button className="mobile-toggle" onClick={onToggle} style={{ display:"none", background:`${accent}18`, border:`1px solid ${accent}40`, borderRadius:7, padding:"6px 12px", cursor:"pointer", color:accent, fontSize:12, fontFamily:"Space Mono,monospace" }}>{dark?"☀":"◑"}</button>
     </nav>
   );
 }
 
 export default function Portfolio() {
   const [dark, setDark] = useState(true);
+  const [transitioning, setTransitioning] = useState(false);
   const [active, setActive] = useState("home");
   const [vis, setVis] = useState(false);
   useEffect(()=>{ setTimeout(()=>setVis(true),100); },[]);
@@ -246,22 +292,29 @@ export default function Portfolio() {
   },[]);
 
   const accent = dark?"#00f5a0":"#5050c8";
-  const bg = dark?"#080818":"#f4f4fb";
-  const text = dark?"#ffffff":"#111111";
-  const muted = dark?"rgba(255,255,255,0.52)":"rgba(0,0,0,0.52)";
+  const bg = dark?"#080818":"#f0f0ff";
+  const text = dark?"#ffffff":"#0f0a28";
+  const muted = dark?"rgba(255,255,255,0.55)":"rgba(15,10,40,0.72)";
 
   const Sec = ({id,children})=><section id={id} className="sec-pad" style={{ padding:"100px clamp(24px,6vw,100px) 80px", position:"relative", zIndex:1, width:"100%" }}>{children}</section>;
   const Lbl = ({n,t})=><div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}><span style={{ fontSize:10, fontFamily:"Space Mono,monospace", color:accent, letterSpacing:4, fontWeight:700, background:`${accent}12`, border:`1px solid ${accent}25`, borderRadius:5, padding:"3px 10px" }}>{n} / {t}</span><div style={{ flex:1, height:1, background:`linear-gradient(90deg,${accent}30,transparent)` }} /></div>;
   const H2 = ({children})=><h2 style={{ fontSize:"clamp(30px,4.8vw,54px)", fontWeight:700, marginBottom:36, letterSpacing:-1.5,
-    background:dark?"linear-gradient(135deg,#fff 40%,#00f5a0 100%)":"linear-gradient(135deg,#111 40%,#5050c8 100%)",
-    WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text"
+    backgroundImage:dark?"linear-gradient(135deg,#fff 40%,#00f5a0 100%)":"linear-gradient(135deg,#0f0a28 35%,#4040c0 70%,#7c83fd 100%)",
+    WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text",
+    background:"none", color:"transparent", display:"block"
   }}>{children}</h2>;
 
   return (
-    <div style={{ background:dark?"linear-gradient(160deg,#04050f 0%,#080818 40%,#0a0a20 100%)":bg, color:text, fontFamily:"DM Sans,sans-serif", transition:"background 0.4s,color 0.4s", minHeight:"100vh", overflowX:"hidden" }}>
+    <div className={transitioning?"theme-transition":""} style={{ background:dark?"linear-gradient(160deg,#04050f 0%,#080818 40%,#0a0a20 100%)":"linear-gradient(160deg,#f0f0ff 0%,#f4f4fb 40%,#ece8ff 100%)", color:text, fontFamily:"DM Sans,sans-serif", transition:"background 0.5s cubic-bezier(0.4,0,0.2,1), color 0.5s cubic-bezier(0.4,0,0.2,1)", minHeight:"100vh", overflowX:"hidden" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
+        .theme-transition,
+        .theme-transition *:not(canvas):not(img):not(.skip-transition){
+          transition:background-color 0.5s cubic-bezier(0.4,0,0.2,1),
+                     border-color 0.5s cubic-bezier(0.4,0,0.2,1),
+                     color 0.5s cubic-bezier(0.4,0,0.2,1) !important;
+        }
         html{scroll-behavior:smooth;}
         @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(36px);}to{opacity:1;transform:translateY(0);}}
@@ -274,6 +327,7 @@ export default function Portfolio() {
         ::-webkit-scrollbar{width:3px;}
         ::-webkit-scrollbar-track{background:transparent;}
         ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#00f5a0,#7c83fd);border-radius:3px;}
+
         /* ── Large screens: more breathing room ── */
         @media(min-width:1400px){
           .sec-pad{padding:120px clamp(80px,10vw,180px) 100px!important;}
@@ -315,11 +369,11 @@ export default function Portfolio() {
           .contact-links{flex-direction:column!important;align-items:stretch!important;max-width:340px;margin:0 auto!important;}
           .contact-links a{justify-content:center!important;text-align:center!important;}
           /* Nav */
-          nav{padding:0 16px!important;}
+          nav{padding:0 22px!important;}
           .nav-text-links{display:none!important;}
           .mobile-toggle{display:flex!important;align-items:center;}
           /* Sections */
-          .sec-pad{padding:80px 18px 60px!important;}
+          .sec-pad{padding:80px 26px 60px!important;}
           /* General center */
           section h2{text-align:center;}
           .about-cols p{text-align:left!important;}
@@ -331,30 +385,31 @@ export default function Portfolio() {
           .skill-grid{grid-template-columns:1fr!important;}
           .hero-btns{flex-direction:column!important;align-items:stretch!important;}
           .hero-btns a{text-align:center!important;}
-          .sec-pad{padding:70px 14px 50px!important;}
+          .sec-pad{padding:70px 22px 50px!important;}
           nav span{font-size:12px!important;}
         }
       `}</style>
       <Particles dark={dark} />
-      <Nav dark={dark} setDark={setDark} active={active} />
+
+      <Nav dark={dark} onToggle={()=>{setTransitioning(true);setDark(d=>!d);setTimeout(()=>setTransitioning(false),520);}} active={active} />
 
       {/* HERO */}
       <section id="home" className="sec-pad" style={{ minHeight:"100vh", display:"flex", alignItems:"center", padding:"80px clamp(20px,8vw,120px) 60px", position:"relative", zIndex:1 }}>
         <div className="hero-grid" style={{ opacity:vis?1:0, transition:"opacity 0.9s ease", display:"grid", gridTemplateColumns:"1fr auto", gap:"clamp(30px,5vw,80px)", alignItems:"center", width:"100%" }}>
           <div>
-            <div style={{ fontSize:11, fontFamily:"Space Mono,monospace", color:dark?"rgba(255,255,255,0.3)":"rgba(0,0,0,0.3)", letterSpacing:3, marginBottom:22, animation:"fadeUp 0.8s 0s cubic-bezier(0.16,1,0.3,1) both" }}>&gt;&gt; HELLO WORLD</div>
-            <h1 style={{ fontSize:"clamp(46px,8.5vw,100px)", fontWeight:700, lineHeight:1.02, marginBottom:14, animation:"fadeUp 0.9s 0.1s cubic-bezier(0.16,1,0.3,1) both", letterSpacing:-3,
-                background:dark?"linear-gradient(135deg, #ffffff 30%, #00f5a0 70%, #7c83fd 100%)":"linear-gradient(135deg, #111 30%, #5050c8 70%, #a78bfa 100%)",
-                WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text"
+            <div style={{ fontSize:11, fontFamily:"Space Mono,monospace", color:dark?"rgba(255,255,255,0.3)":"rgba(15,10,40,0.45)", letterSpacing:3, marginBottom:22, animation:"fadeUp 0.8s 0s cubic-bezier(0.16,1,0.3,1) both" }}>&gt;&gt; HELLO WORLD</div>
+            <h1 style={{ fontSize:"clamp(46px,8.5vw,100px)", fontWeight:700, lineHeight:1.02, marginBottom:14, animation:"fadeUp 0.9s 0.1s cubic-bezier(0.16,1,0.3,1) both", letterSpacing:-3, background:"none", color:"transparent", WebkitTextFillColor:"transparent",
+                backgroundImage:dark?"linear-gradient(135deg, #ffffff 30%, #00f5a0 70%, #7c83fd 100%)":"linear-gradient(135deg, #0a0520 25%, #4040c0 60%, #7c83fd 100%)",
+                WebkitBackgroundClip:"text", backgroundClip:"text", display:"block"
               }}>Ahmed Ali</h1>
             <h2 style={{ fontSize:"clamp(18px,3.2vw,34px)", fontWeight:300, color:muted, marginBottom:28, animation:"fadeUp 0.9s 0.2s cubic-bezier(0.16,1,0.3,1) both", fontFamily:"Space Mono,monospace", minHeight:42 }}>
-              <Typewriter strings={TYPING_STRINGS} />
+              <Typewriter strings={TYPING_STRINGS} dark={dark} />
             </h2>
             <p style={{ fontSize:15, lineHeight:1.95, color:muted, maxWidth:"min(540px,100%)", marginBottom:36, animation:"fadeUp 0.9s 0.32s cubic-bezier(0.16,1,0.3,1) both" }}>
               CS enthusiast building <span style={{color:accent,fontWeight:600}}>AI tools</span>, automation systems, and mobile apps. <span style={{color:dark?"#7c83fd":"#5050c8",fontWeight:600}}>5+ years</span> of graphic design experience. <span style={{color:accent,fontWeight:600}}>20+ real-world projects</span> shipped.
             </p>
             <div className="hero-btns" style={{ display:"flex", gap:14, flexWrap:"wrap", animation:"fadeUp 0.9s 0.44s cubic-bezier(0.16,1,0.3,1) both" }}>
-              <a href="#projects" style={{ background:`linear-gradient(135deg, ${accent}, #00b4d8)`, color:"#050510", padding:"13px 28px", borderRadius:10, textDecoration:"none", fontWeight:700, fontSize:13, fontFamily:"Space Mono,monospace", boxShadow:`0 0 32px ${accent}50, 0 4px 20px rgba(0,0,0,0.3)`, display:"inline-block", transition:"transform 0.2s, box-shadow 0.2s", letterSpacing:0.5 }} onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>View Projects →</a>
+              <a href="#projects" style={{ background:dark?`linear-gradient(135deg, ${accent}, #00b4d8)`:`linear-gradient(135deg, #5050c8, #7c83fd)`, color:dark?"#050510":"#ffffff", padding:"13px 28px", borderRadius:10, textDecoration:"none", fontWeight:700, fontSize:13, fontFamily:"Space Mono,monospace", boxShadow:`0 0 32px ${accent}50, 0 4px 20px rgba(0,0,0,0.3)`, display:"inline-block", transition:"transform 0.2s, box-shadow 0.2s", letterSpacing:0.5 }} onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>View Projects →</a>
               <a href="https://github.com/ahmxli42" target="_blank" rel="noreferrer" style={{ border:`1px solid ${accent}50`, color:accent, padding:"13px 26px", borderRadius:10, textDecoration:"none", fontSize:13, fontFamily:"Space Mono,monospace", transition:"background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background=`${accent}10`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>⌥ GitHub</a>
             </div>
             {/* Subtle availability line - professional placement */}
@@ -388,7 +443,7 @@ export default function Portfolio() {
           <ScrollReveal delay={0.1}>
           <div className="about-stats" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"clamp(12px,2vw,24px)", marginBottom:52, width:"100%" }}>
             {[["20+","Real-World Projects"],["5+","Years of Design"],["2025","AI & Python Role"]].map(([num,label])=>(
-              <div key={num} style={{ textAlign:"center", padding:"28px 16px", borderRadius:16, background:dark?"rgba(0,245,160,0.04)":"rgba(80,80,200,0.04)", border:`1px solid ${accent}22`, transition:"border-color 0.3s" }}>
+              <div key={num} style={{ textAlign:"center", padding:"28px 16px", borderRadius:16, background:dark?"rgba(0,245,160,0.04)":"rgba(255,255,255,0.6)", border:`1px solid ${accent}22`, transition:"border-color 0.3s" }}>
                 <div style={{ fontSize:"clamp(32px,4.5vw,52px)", fontWeight:700, fontFamily:"Space Mono,monospace", color:accent, lineHeight:1 }}>{num}</div>
                 <div style={{ fontSize:12, color:muted, marginTop:8, lineHeight:1.5 }}>{label}</div>
               </div>
@@ -413,10 +468,10 @@ export default function Portfolio() {
             <ScrollReveal delay={0.22}>
             <div className="about-cards" style={{ display:"flex", flexDirection:"column", gap:14, minWidth:0, gridColumn:2, gridRow:"1 / 3" }}>
               {[["🎓","Computer Science","BSCS — Currently Enrolled"],["💼","AI & Python Developer","5-Month Role · 2025"],["🎨","Graphic Designer","5+ Years Freelance"],["🤖","Machine Learning","Practical Experience"],["🌍","Rawalpindi, Pakistan","Open to Remote Work"]].map(([icon,title,sub])=>(
-                <div key={title} style={{ display:"flex", alignItems:"center", gap:16, padding:"16px 20px", borderRadius:12, background:dark?"rgba(255,255,255,0.025)":"rgba(0,0,0,0.025)", border:dark?"1px solid rgba(255,255,255,0.06)":"1px solid rgba(0,0,0,0.06)", transition:"border-color 0.3s, background 0.3s" }}>
+                <div key={title} style={{ display:"flex", alignItems:"center", gap:16, padding:"16px 20px", borderRadius:12, background:dark?"rgba(255,255,255,0.025)":"rgba(255,255,255,0.65)", border:dark?"1px solid rgba(255,255,255,0.06)":"1px solid rgba(80,80,200,0.15)", transition:"border-color 0.3s, background 0.3s" }}>
                   <span style={{ fontSize:22, flexShrink:0 }}>{icon}</span>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontSize:13.5, fontWeight:600, color:dark?"#e8e8e8":"#222", marginBottom:3 }}>{title}</div>
+                    <div style={{ fontSize:13.5, fontWeight:600, color:dark?"#e8e8e8":"#0f0a28", marginBottom:3 }}>{title}</div>
                     <div style={{ fontSize:12, color:muted }}>{sub}</div>
                   </div>
                   <div style={{ width:6, height:6, borderRadius:"50%", background:accent, opacity:0.5, flexShrink:0 }} />
@@ -440,15 +495,15 @@ export default function Portfolio() {
                   <div style={{
                     display:"flex", alignItems:"center", gap:14,
                     padding:"14px 18px", borderRadius:12, height:"100%",
-                    background:dark?"rgba(0,245,160,0.04)":"rgba(80,80,200,0.04)",
-                    border:dark?"1px solid rgba(0,245,160,0.12)":"1px solid rgba(80,80,200,0.1)",
+                    background:dark?"rgba(0,245,160,0.04)":"rgba(255,255,255,0.6)",
+                    border:dark?"1px solid rgba(0,245,160,0.12)":"1px solid rgba(80,80,200,0.2)",
                     transition:"border-color 0.25s, background 0.25s",
                   }}
-                  onMouseEnter={e=>{e.currentTarget.style.background=dark?"rgba(0,245,160,0.09)":"rgba(80,80,200,0.09)"; e.currentTarget.style.borderColor=dark?"rgba(0,245,160,0.3)":"rgba(80,80,200,0.3)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.background=dark?"rgba(0,245,160,0.04)":"rgba(80,80,200,0.04)"; e.currentTarget.style.borderColor=dark?"rgba(0,245,160,0.12)":"rgba(80,80,200,0.1)";}}>
+                  onMouseEnter={e=>{e.currentTarget.style.background=dark?"rgba(0,245,160,0.09)":"rgba(80,80,200,0.12)"; e.currentTarget.style.borderColor=dark?"rgba(0,245,160,0.3)":"rgba(80,80,200,0.45)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=dark?"rgba(0,245,160,0.04)":"rgba(255,255,255,0.6)"; e.currentTarget.style.borderColor=dark?"rgba(0,245,160,0.12)":"rgba(80,80,200,0.1)";}}>
                     <span style={{ fontSize:22, flexShrink:0 }}>{icon}</span>
                     <div>
-                      <div style={{ fontSize:13.5, fontWeight:700, color:dark?"#e8e8e8":"#1a1a2e", marginBottom:2 }}>{label}</div>
+                      <div style={{ fontSize:13.5, fontWeight:700, color:dark?"#e8e8e8":"#0f0a28", marginBottom:2 }}>{label}</div>
                       <div style={{ fontSize:12, color:muted, fontFamily:"Space Mono,monospace" }}>{desc}</div>
                     </div>
                   </div>
@@ -493,7 +548,7 @@ export default function Portfolio() {
           <ScrollReveal><Lbl n="04" t="EXPERIENCE" /></ScrollReveal>
           <H2>Work Experience</H2>
           <div className="exp-timeline" style={{ position:"relative", paddingLeft:"clamp(20px,3vw,40px)", width:"100%" }}>
-            <div style={{ position:"absolute", left:0, top:8, bottom:8, width:2, background:dark?"rgba(0,245,160,0.18)":"rgba(80,80,200,0.18)", borderRadius:1 }} />
+            <div style={{ position:"absolute", left:0, top:8, bottom:8, width:2, background:dark?"rgba(0,245,160,0.25)":"rgba(80,80,200,0.35)", borderRadius:1 }} />
             {[
               { role:"AI & Python Developer", company:"Internship · 5 Months", period:"2025", points:["Built AI-powered tools and automation systems","Developed Python solutions and LLM integrations","Delivered real-world machine learning applications"], color:accent },
               { role:"Freelance Graphic Designer", company:"Independent", period:"2020 — Present", points:["5+ years creating brand identities, UI mockups, and digital assets","Worked with multiple clients across Pakistan and remotely","Proficient in industry-standard design tools"], color:dark?"#7c83fd":"#5050c8" },
@@ -503,10 +558,10 @@ export default function Portfolio() {
                 <div style={{ position:"absolute", left:-32, top:6, width:12, height:12, borderRadius:"50%", background:exp.color, boxShadow:`0 0 12px ${exp.color}80` }} />
                 <div style={{ display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
                   <div>
-                    <div style={{ fontSize:16, fontWeight:700, fontFamily:"Space Mono,monospace" }}>{exp.role}</div>
+                    <div style={{ fontSize:16, fontWeight:700, fontFamily:"Space Mono,monospace", color:dark?"#ffffff":"#0f0a28" }}>{exp.role}</div>
                     <div style={{ fontSize:13, color:exp.color, marginTop:3 }}>{exp.company}</div>
                   </div>
-                  <div style={{ fontSize:11, color:muted, fontFamily:"monospace", background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)", padding:"4px 10px", borderRadius:6, alignSelf:"flex-start" }}>{exp.period}</div>
+                  <div style={{ fontSize:11, color:muted, fontFamily:"monospace", background:dark?"rgba(255,255,255,0.05)":"rgba(80,80,200,0.1)", padding:"4px 10px", borderRadius:6, alignSelf:"flex-start" }}>{exp.period}</div>
                 </div>
                 <ul style={{ listStyle:"none", padding:0 }}>
                   {exp.points.map((pt,j)=><li key={j} style={{ fontSize:14, color:muted, lineHeight:1.75, display:"flex", gap:10, marginBottom:4 }}><span style={{ color:exp.color, flexShrink:0 }}>›</span>{pt}</li>)}
@@ -530,7 +585,7 @@ export default function Portfolio() {
             <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:muted, fontFamily:"Space Mono,monospace" }}>
               <span>📍</span><span>Rawalpindi, Pakistan</span>
             </div>
-            <span style={{ color:dark?"rgba(255,255,255,0.15)":"rgba(0,0,0,0.15)" }}>·</span>
+            <span style={{ color:dark?"rgba(255,255,255,0.15)":"rgba(15,10,40,0.25)" }}>·</span>
             <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:muted, fontFamily:"Space Mono,monospace" }}>
               <span style={{ width:6, height:6, borderRadius:"50%", background:accent, display:"inline-block" }} />
               <span>Actively considering opportunities</span>
@@ -538,13 +593,13 @@ export default function Portfolio() {
           </div>
           <div className="contact-links" style={{ display:"flex", gap:16, justifyContent:"center", flexWrap:"wrap", width:"100%" }}>
             {[{label:"GitHub",icon:"⌥",href:"https://github.com/ahmxli42"},{label:"Email",icon:"✉",href:"mailto:ahmxli42@gmail.com"},{label:"LinkedIn",icon:"in",href:"#"}].map(({label,icon,href})=>(
-              <a key={label} href={href} target="_blank" rel="noreferrer" style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 32px", borderRadius:12, minWidth:140, justifyContent:"center", border:`1px solid ${dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`, color:text, textDecoration:"none", fontSize:13, fontFamily:"Space Mono,monospace", background:dark?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.03)", transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.borderColor=accent;e.currentTarget.style.color=accent;e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor=dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)";e.currentTarget.style.color=text;e.currentTarget.style.transform="translateY(0)";}}><span>{icon}</span>{label}</a>
+              <a key={label} href={href} target="_blank" rel="noreferrer" style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 32px", borderRadius:12, minWidth:140, justifyContent:"center", border:`1px solid ${dark?"rgba(255,255,255,0.1)":"rgba(80,80,200,0.2)"}`, color:text, textDecoration:"none", fontSize:13, fontFamily:"Space Mono,monospace", background:dark?"rgba(255,255,255,0.03)":"rgba(255,255,255,0.6)", transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.borderColor=accent;e.currentTarget.style.color=accent;e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor=dark?"rgba(255,255,255,0.1)":"rgba(80,80,200,0.2)";e.currentTarget.style.color=text;e.currentTarget.style.transform="translateY(0)";}}><span>{icon}</span>{label}</a>
             ))}
           </div>
         </div>
       </Sec>
 
-      <footer style={{ textAlign:"center", padding:"36px 20px 28px", borderTop:dark?`1px solid rgba(0,245,160,0.12)`:`1px solid rgba(0,0,0,0.07)`, color:muted, position:"relative", zIndex:1 }}>
+      <footer style={{ textAlign:"center", padding:"36px 20px 28px", borderTop:dark?`1px solid rgba(0,245,160,0.12)`:`1px solid rgba(80,80,200,0.15)`, color:muted, position:"relative", zIndex:1 }}>
         <button onClick={()=>window.scrollTo({top:0,behavior:"smooth"})} style={{ background:"transparent", border:`1px solid ${dark?"rgba(0,245,160,0.25)":"rgba(80,80,200,0.25)"}`, borderRadius:8, padding:"8px 18px", cursor:"pointer", color:dark?"rgba(0,245,160,0.8)":"#5050c8", fontSize:10, fontFamily:"Space Mono,monospace", marginBottom:18, transition:"all 0.2s", letterSpacing:1.5 }} onMouseEnter={e=>{e.currentTarget.style.background=dark?"rgba(0,245,160,0.08)":"rgba(80,80,200,0.08)"}} onMouseLeave={e=>{e.currentTarget.style.background="transparent"}}>↑ BACK TO TOP</button>
         <div style={{ fontSize:11, fontFamily:"Space Mono,monospace" }}>Built with ❤️ by <span style={{color:dark?"#00f5a0":"#5050c8",fontWeight:700}}>Ahmed Ali</span> · @ahmxli42 · {new Date().getFullYear()}</div>
       </footer>
